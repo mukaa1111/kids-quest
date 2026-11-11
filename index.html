@@ -270,7 +270,7 @@
       '<div class="prog"><div style="width:' + (n / 3 * 100) + '%"></div></div>' +
       '<div class="muted" style="color:#c9d4ea;margin-bottom:6px">오늘 미션 ' + n + '/3 · 다 깨면 카드를 뽑아요 🎁' + (k.streak > 1 ? ' · 🔥 ' + k.streak + '일 연속' : '') + '</div>' +
       '<button class="btn' + (d.dict ? ' done' : '') + '" data-go="dict"' + (d.dict ? ' disabled' : '') + '>✏️ 받아쓰기 ' + esc(dictTitle()) + '<span class="tag">' + (d.dict ? '완료 ⭐' + d.dictok : '5문장') + '</span></button>' +
-      '<button class="btn' + (d.eng ? ' done' : '') + '" data-go="eng"' + (d.eng ? ' disabled' : '') + '>🔤 영어 단어<span class="tag">' + (d.eng ? '완료 ⭐' + d.engok : '10단어') + '</span></button>' +
+      '<button class="btn' + (d.eng ? ' done' : '') + '" data-go="eng"' + (d.eng ? ' disabled' : '') + '>🔤 영어 단어<span class="tag">' + (d.eng ? '완료 ⭐' + d.engok : '10단어') + '</span><div class="small" style="color:var(--muted);font-weight:500;margin-top:2px">' + esc(engSet().unit || engSet().week || '') + '</div></button>' +
       '<button class="btn' + (d.quiz ? ' done' : '') + '" data-go="quiz"' + (d.quiz ? ' disabled' : '') + '>' + QUIZ[topic].emoji + ' 지식 퀴즈: ' + esc(topic) + '<span class="tag">' + (d.quiz ? '완료 ⭐' + d.quizok : '10문제') + '</span></button>' +
       (n === 3 ? '<button class="btn main" data-go="card">🎁 카드 뽑기!</button>' : '') +
       '<div class="row"><button class="btn ghost" data-go="album">📚 카드첩</button><button class="btn ghost" data-go="badges">🏅 배지</button><button class="btn ghost" data-go="stats">📊 기록</button></div>' +
@@ -330,8 +330,9 @@
   }
 
   // ---------- 미션: 영어 ----------
+  function engSet() { return ENGLISH.kids ? (ENGLISH.kids[S.cur] || ENGLISH.kids[0]) : ENGLISH; }
   function startEng() {
-    var words = ENGLISH.words; var qs = pick(words, Math.min(10, words.length));
+    var words = engSet().words; var qs = pick(words, Math.min(10, words.length));
     M = { kind: "eng", items: qs.map(function (w, i) { return { w: w, type: i % 2 }; }), i: 0, ok: 0, lock: false, all: words }; combo = 0; showCombo(); stepEng();
   }
   function stepEng() {
@@ -507,7 +508,7 @@
   function screenParentMenu() {
     render('<div class="panel"><h2>부모님 메뉴</h2>' +
       S.kids.map(function (k, i) { var d = dayState(i), h = (S.hist[i] || {})[today()] || {}; return '<p><b>' + esc(k.name || ("대원 " + (i + 1))) + '</b> · 오늘 ' + (d.done ? '완료(잠김)' : '진행 중') + ' · ✏️' + (h.d != null ? h.d : '-') + ' 🔤' + (h.e != null ? h.e : '-') + ' 🦖' + (h.q != null ? h.q : '-') + ' · 카드 ' + Object.keys(k.cards).length + '장 · 연속 ' + k.streak + '일' + (d.done ? ' <button class="btn ghost" style="display:inline-block;width:auto;min-height:40px;padding:6px 12px;font-size:15px;color:#1f2430;background:#eef1f7" data-unlock="' + i + '">오늘 다시 열기</button>' : '') + '</p>'; }).join("") +
-      '<p class="muted">받아쓰기 급수: ' + esc(dictTitle()) + ' · 영어: ' + esc(ENGLISH.week) + '</p>' +
+      '<p class="muted">받아쓰기 급수: ' + esc(dictTitle()) + (ENGLISH.kids ? ENGLISH.kids.map(function (e, i) { return '<br>영어(' + esc(S.kids[i].name) + '): ' + esc(e.book) + ' · ' + esc(e.week); }).join("") : ' · 영어: ' + esc(ENGLISH.week)) + '</p>' +
       '<button class="btn" data-go="names" style="box-shadow:none;background:#eef1f7">이름 바꾸기</button>' +
       '<button class="btn" data-go="resetbattle" style="box-shadow:none;background:#eef1f7">오늘 배틀 다시 열기</button>' +
       '<button class="btn ghost" data-go="kids" style="color:#1f2430">닫기</button></div>');
