@@ -8,12 +8,12 @@
 단어장이 없는 주에는 지금 들어 있는 교재 단원 단어가 그대로 쓰인다.
 
 ### 지금 들어 있는 것 (2026-11-11)
-| 아이 | 교재 | 단어 | 출처 |
-|---|---|---|---|
-| 룰루 | Journeys Ready to Roll · Unit 2 (R&V) | Lesson 6~10 Words to Know 26개 | HMH Journeys Grade 1 교사 자료(학교 공개 목록) |
-| 랄라 | Wonders Set Sail · Unit 2 (TB, R&V) | Unit 2 "Our Community" High-Frequency Words 25개 | McGraw-Hill Wonders Grade 1 공식 Scope & Sequence |
+| 아이 | 폴리 레벨 | 교재 | 단어 | 출처 |
+|---|---|---|---|---|
+| 룰루 | GT1 (미국 1학년) | Journeys Ready to Roll · Unit 2 (R&V) | Lesson 6~10 Words to Know 26개 | HMH Journeys Grade 1 교사 자료(학교 공개 목록) |
+| 랄라 | GT2 (미국 2학년) | Wonders Set Sail · Unit 2 (TB, R&V) | Unit 2 High-Frequency Words 50개(주별 10개) | McGraw-Hill Wonders Grade 2 공식 Scope & Sequence |
 
-"Set Sail"과 "Ready to Roll"은 각각 Wonders·Journeys **Grade 1**로 보고 넣었다. 단어장과 다르면 그 주에 바로 고친다.
+폴리 레벨 GT1·GT2는 미국 학년 기준이다 (GT1 = Grade 1, GT2 = Grade 2). 단어장과 다르면 그 주에 바로 고친다.
 
 ## 받아쓰기 급수 바꾸기
 - "받아쓰기 4급으로 바꿔줘" → `data/dictation.js`의 `current` 숫자만 바뀐다.
