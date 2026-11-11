@@ -27,3 +27,6 @@ $removed = 0
 Get-ChildItem $dir -Filter *.wav | ForEach-Object { if (-not $keep.ContainsKey($_.Name)) { Remove-Item $_.FullName -Confirm:$false; $removed++ } }
 $size = [math]::Round(((Get-ChildItem $dir -Filter *.wav | Measure-Object Length -Sum).Sum / 1MB), 1)
 Write-Output "voice=$($voice.VoiceInfo.Name) made=$made skipped=$skipped removed=$removed total=$($list.Count) size=${size}MB"
+# Size budget: keep all dictation audio under 15 MB (16 kHz / 16 bit / mono; 11 kHz blurs s/ch sounds, so do not lower it).
+# If this warning shows, make audio only for the current level + review sentences instead of every level (see docs/WEEKLY.md).
+if ($size -gt 15) { Write-Output "WARNING: audio is over the 15 MB budget (${size}MB)" }
