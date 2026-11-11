@@ -126,7 +126,8 @@
   var S = load();
   function load() {
     var d = null; try { d = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
-    if (!d) d = { kids: [{ name: "", cards: {}, streak: 0, lastDay: "", battles: 0 }, { name: "", cards: {}, streak: 0, lastDay: "", battles: 0 }], pin: "2468", day: {}, battleDay: "", cur: -1 };
+    if (!d) d = { kids: [{ name: "룰루", cards: {}, streak: 0, lastDay: "", battles: 0 }, { name: "랄라", cards: {}, streak: 0, lastDay: "", battles: 0 }], pin: "2468", day: {}, battleDay: "", cur: -1 };
+    if (!d.hist) d.hist = [{}, {}];          // 날짜별 기록: hist[아이][날짜] = { d, e, q, card }
     return d;
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
@@ -217,8 +218,25 @@
       '<button class="btn' + (d.eng ? ' done' : '') + '" data-go="eng"' + (d.eng ? ' disabled' : '') + '>🔤 영어 단어<span class="tag">' + (d.eng ? '완료 ⭐' + d.engok : '10단어') + '</span></button>' +
       '<button class="btn' + (d.quiz ? ' done' : '') + '" data-go="quiz"' + (d.quiz ? ' disabled' : '') + '>' + QUIZ[topic].emoji + ' 지식 퀴즈: ' + esc(topic) + '<span class="tag">' + (d.quiz ? '완료 ⭐' + d.quizok : '10문제') + '</span></button>' +
       (n === 3 ? '<button class="btn main" data-go="card">🎴 카드 뽑기!</button>' : '') +
-      '<div class="row"><button class="btn ghost" data-go="album">📚 카드첩</button><button class="btn ghost" data-go="kids">↩ 대원 바꾸기</button></div>'
+      '<div class="row"><button class="btn ghost" data-go="album">📚 카드첩</button><button class="btn ghost" data-go="stats">📊 기록</button><button class="btn ghost" data-go="kids">↩ 대원 바꾸기</button></div>'
     );
+  }
+  // ---------- 기록 ----------
+  function screenStats() {
+    var k = kid(), H = S.hist[S.cur] || {}, days = Object.keys(H).sort().reverse();
+    var played = days.filter(function (d) { return H[d].card; }).length;
+    var sum = { d: 0, e: 0, q: 0, n: 0 };
+    days.forEach(function (d) { var h = H[d]; if (h.d != null) { sum.d += h.d; sum.n++; } if (h.e != null) sum.e += h.e; if (h.q != null) sum.q += h.q; });
+    function cardOf(id) { var c = CARDS.filter(function (x) { return x.id === id; })[0]; return c ? c.emoji + " " + c.name : "-"; }
+    function fmt(d) { return d.slice(5, 7).replace(/^0/, "") + "/" + d.slice(8, 10).replace(/^0/, "") + " (" + "일월화수목금토"[new Date(d.slice(0, 4), d.slice(5, 7) - 1, d.slice(8, 10)).getDay()] + ")"; }
+    render(top() + '<div class="center big" style="margin-bottom:8px">📊 ' + esc(k.name) + '의 기록</div>' +
+      '<div class="panel"><div class="score"><span>🔥<br><small>연속</small><br>' + k.streak + '일</span><span>🧭<br><small>탐험</small><br>' + played + '일</span><span>🎴<br><small>카드</small><br>' + Object.keys(k.cards).length + '장</span><span>⚔️<br><small>배틀</small><br>' + k.battles + '승</span></div></div>' +
+      (sum.n ? '<div class="panel small"><b>평균 점수</b> · ✏️ 받아쓰기 ' + (sum.d / sum.n).toFixed(1) + '/5 · 🔤 영어 ' + (sum.e / sum.n).toFixed(1) + '/10 · 🦖 퀴즈 ' + (sum.q / sum.n).toFixed(1) + '/10</div>' : '') +
+      '<div class="panel small"><b>최근 14일</b>' +
+      (days.length ? '<table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:16px"><tr style="color:var(--muted)"><th style="text-align:left">날짜</th><th>✏️</th><th>🔤</th><th>🦖</th><th style="text-align:left">카드</th></tr>' +
+        days.slice(0, 14).map(function (d) { var h = H[d]; return '<tr style="border-top:1px solid var(--line)"><td style="padding:6px 0">' + fmt(d) + '</td><td class="center">' + (h.d != null ? h.d + '/5' : '-') + '</td><td class="center">' + (h.e != null ? h.e + '/10' : '-') + '</td><td class="center">' + (h.q != null ? h.q + '/10' : '-') + '</td><td>' + (h.card ? esc(cardOf(h.card)) : '-') + '</td></tr>'; }).join("") + '</table>'
+        : '<p class="muted">아직 기록이 없어요. 첫 미션을 해 보세요!</p>') + '</div>' +
+      '<button class="btn ghost" data-go="' + (dayState(S.cur).done ? 'locked' : 'home') + '">↩ 돌아가기</button>');
   }
   function top() { return '<div class="top"><div class="who">' + (S.cur === 0 ? "🦖 " : "🚀 ") + esc(kid().name) + '<small>카드 ' + Object.keys(kid().cards).length + '장</small></div><button class="btn ghost" style="width:auto;margin:0" data-go="home">🏠</button></div>'; }
   function topicOfDay() {
@@ -308,7 +326,8 @@
 
   // ---------- 미션 끝 ----------
   function finishMission(kind, ok, total) {
-    var d = dayState(S.cur); d[kind] = true; d[kind + "ok"] = ok; save();
+    var d = dayState(S.cur); d[kind] = true; d[kind + "ok"] = ok;
+    var h = S.hist[S.cur][today()] = S.hist[S.cur][today()] || {}; h[kind[0]] = ok; save();
     confetti(80); beep("card");
     var n = (d.dict ? 1 : 0) + (d.eng ? 1 : 0) + (d.quiz ? 1 : 0);
     render(top() + '<div class="panel center"><div class="huge">' + (ok === total ? '🏆' : ok >= total * 0.6 ? '🌟' : '💪') + '</div><div class="big">' + ok + ' / ' + total + ' 맞혔어요!</div>' +
@@ -325,7 +344,7 @@
     var c = pool[Math.floor(Math.random() * pool.length)];
     var k = kid(); k.cards[c.id] = (k.cards[c.id] || 0) + 1;
     var t = today(); if (k.lastDay !== t) { k.streak = (k.lastDay === yesterday() ? k.streak : 0) + 1; k.lastDay = t; }
-    d.card = c.id; save();
+    d.card = c.id; var h = S.hist[S.cur][t] = S.hist[S.cur][t] || {}; h.card = c.id; save();
     showCard(c.id, true);
   }
   function yesterday() { var d = new Date(); d.setDate(d.getDate() - 1); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
@@ -356,7 +375,7 @@
   function screenLocked() {
     var d = dayState(S.cur); var c = d.card ? CARDS.filter(function (x) { return x.id === d.card; })[0] : null;
     render(top() + '<div class="panel center"><div class="huge">🌙</div><div class="big">오늘 탐험 완료!</div><p>내일 새 미션과 새 카드가 기다려요.</p>' + (c ? '<p class="huge">' + c.emoji + '</p><p><b>' + esc(c.name) + '</b></p>' : '') + '</div>' +
-      '<button class="btn ghost" data-go="album">📚 카드첩 보기</button><button class="btn ghost" data-go="kids">↩ 대원 바꾸기</button><button class="btn ghost small" data-go="parent">🔒 부모님</button>');
+      '<div class="row"><button class="btn ghost" data-go="album">📚 카드첩</button><button class="btn ghost" data-go="stats">📊 기록</button></div><button class="btn ghost" data-go="kids">↩ 대원 바꾸기</button><button class="btn ghost small" data-go="parent">🔒 부모님</button>');
   }
   // 2048
   var G = null;
@@ -428,7 +447,7 @@
   }
   function screenParentMenu() {
     render('<div class="panel"><h2>부모님 메뉴</h2>' +
-      S.kids.map(function (k, i) { var d = dayState(i); return '<p><b>' + esc(k.name || ("대원 " + (i + 1))) + '</b> · 오늘 ' + (d.done ? '완료(잠김)' : '진행 중') + ' · 카드 ' + Object.keys(k.cards).length + '장 · 연속 ' + k.streak + '일' + (d.done ? ' <button class="btn ghost" style="display:inline-block;width:auto;min-height:40px;padding:6px 12px;font-size:15px;color:#1f2430;background:#eef1f7" data-unlock="' + i + '">오늘 다시 열기</button>' : '') + '</p>'; }).join("") +
+      S.kids.map(function (k, i) { var d = dayState(i), h = (S.hist[i] || {})[today()] || {}; return '<p><b>' + esc(k.name || ("대원 " + (i + 1))) + '</b> · 오늘 ' + (d.done ? '완료(잠김)' : '진행 중') + ' · ✏️' + (h.d != null ? h.d : '-') + ' 🔤' + (h.e != null ? h.e : '-') + ' 🦖' + (h.q != null ? h.q : '-') + ' · 카드 ' + Object.keys(k.cards).length + '장 · 연속 ' + k.streak + '일' + (d.done ? ' <button class="btn ghost" style="display:inline-block;width:auto;min-height:40px;padding:6px 12px;font-size:15px;color:#1f2430;background:#eef1f7" data-unlock="' + i + '">오늘 다시 열기</button>' : '') + '</p>'; }).join("") +
       '<p class="muted">받아쓰기 급수: ' + esc(dictTitle()) + ' · 영어: ' + esc(ENGLISH.week) + '</p>' +
       '<button class="btn" data-go="names" style="box-shadow:none;background:#eef1f7">이름 바꾸기</button>' +
       '<button class="btn" data-go="resetbattle" style="box-shadow:none;background:#eef1f7">오늘 배틀 다시 열기</button>' +
@@ -465,6 +484,7 @@
       case "gmem": return startMem();
       case "endreward": return endReward();
       case "album": return screenAlbum();
+      case "stats": return screenStats();
       case "locked": return screenLocked();
       case "battle": return screenBattle();
       case "parent": return screenParent();
