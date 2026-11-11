@@ -29,5 +29,15 @@ window.CARDS = [
   { id: "hero07", set: "탐험가", name: "마리 퀴리", emoji: "🔬", grade: 2, fact: "노벨상을 두 번이나 받은 과학자예요." },
   { id: "hero08", set: "탐험가", name: "안중근", emoji: "🇰🇷", grade: 2, fact: "나라의 독립을 위해 용감하게 싸운 독립운동가예요." },
   { id: "hero09", set: "탐험가", name: "유관순", emoji: "🇰🇷", grade: 2, fact: "3·1 운동 때 만세를 외친 독립운동가예요." },
-  { id: "hero10", set: "탐험가", name: "아인슈타인", emoji: "🧠", grade: 3, fact: "상대성 이론을 만든 천재 과학자예요." }
+  { id: "hero10", set: "탐험가", name: "아인슈타인", emoji: "🧠", grade: 3, fact: "상대성 이론을 만든 천재 과학자예요." },
+  { id: "sport01", set: "스포츠", name: "손흥민", emoji: "⚽", grade: 3, fact: "아시아 선수 최초의 프리미어리그 득점왕이에요." },
+  { id: "sport02", set: "스포츠", name: "메시", emoji: "🐐", grade: 3, fact: "2022년 월드컵에서 아르헨티나를 우승으로 이끌었어요." },
+  { id: "sport03", set: "스포츠", name: "호날두", emoji: "⚽", grade: 2, fact: "별명은 CR7. 골을 넣으면 '시우!' 하고 외쳐요." },
+  { id: "sport04", set: "스포츠", name: "우사인 볼트", emoji: "⚡", grade: 2, fact: "100m를 9초 58에 달린 세상에서 가장 빠른 사람이에요." },
+  { id: "sport05", set: "스포츠", name: "김연아", emoji: "⛸️", grade: 2, fact: "2010 밴쿠버 올림픽 금메달을 딴 피겨 여왕이에요." },
+  { id: "sport06", set: "스포츠", name: "박지성", emoji: "🏃", grade: 1, fact: "지치지 않아서 '두 개의 심장'이라고 불렸어요." },
+  { id: "sport07", set: "스포츠", name: "펠레", emoji: "👑", grade: 1, fact: "월드컵에서 세 번 우승한 브라질의 축구 황제예요." },
+  { id: "sport08", set: "스포츠", name: "마이클 조던", emoji: "🏀", grade: 1, fact: "등번호 23번, 하늘을 나는 듯한 덩크로 유명해요." },
+  { id: "sport09", set: "스포츠", name: "손기정", emoji: "🥇", grade: 1, fact: "1936년 베를린 올림픽 마라톤에서 금메달을 땄어요." },
+  { id: "sport10", set: "스포츠", name: "김연경", emoji: "🏐", grade: 1, fact: "세계가 인정한 우리나라의 배구 여제예요." }
 ];

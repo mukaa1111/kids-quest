@@ -47,7 +47,7 @@
   .row > * { flex: 1; }
   .prog { height: 14px; background: rgba(255,255,255,.18); border-radius: 99px; overflow: hidden; margin: 8px 0 14px; }
   .prog > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--gold)); width: 0; transition: width .3s; }
-  .combo { position: fixed; right: 16px; top: 14px; background: var(--gold); color: #3a2a00; font-weight: 900; padding: 6px 12px; border-radius: 99px; font-size: 18px; display: none; z-index: 5; }
+  .combo { position: fixed; left: 50%; transform: translateX(-50%); top: 10px; pointer-events: none; background: var(--gold); color: #3a2a00; font-weight: 900; padding: 6px 12px; border-radius: 99px; font-size: 18px; display: none; z-index: 5; }
   .blank { display: inline-block; min-width: 90px; border-bottom: 4px solid var(--accent); text-align: center; color: var(--accent); font-weight: 800; }
   input.ans { width: 100%; font: inherit; font-size: 28px; padding: 12px 14px; border: 3px solid var(--line); border-radius: 14px; text-align: center; }
   input.ans:focus { outline: none; border-color: var(--blue); }
@@ -88,6 +88,22 @@
   .bd { display: flex; align-items: center; gap: 12px; background: #fff; color: var(--text); border-radius: 14px; padding: 10px 14px; margin-bottom: 8px; border: 3px solid var(--gold); }
   .bd.no { background: rgba(255,255,255,.1); color: #c9d4ea; border-color: transparent; }
   .bd .em { font-size: 40px; width: 52px; text-align: center; } .bd .nm { font-weight: 800; font-size: 18px; } .bd .hint { font-size: 14px; opacity: .8; }
+  .homebtn { width: auto !important; margin: 0 !important; min-height: 60px !important; min-width: 72px; font-size: 28px !important; padding: 8px 18px !important; }
+  .tiles { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 12px 0; }
+  .tile { min-width: 64px; min-height: 64px; font-size: 30px; font-weight: 800; background: #fff; color: var(--text); border-radius: 14px; box-shadow: 0 5px 0 #c9cfdd; }
+  .tile:disabled { opacity: .25; box-shadow: none; }
+  .spelled { min-height: 56px; font-size: 40px; font-weight: 900; letter-spacing: .12em; color: var(--blue); border-bottom: 4px dashed var(--line); margin: 6px auto 0; display: inline-block; min-width: 200px; }
+  .arrows { text-align: center; margin-top: 10px; }
+  .arrows button { width: 86px; height: 72px; font-size: 34px; margin: 4px; background: rgba(255,255,255,.2); color: #fff; border-radius: 16px; }
+  .arrows button:active { background: var(--accent); }
+  .moles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; max-width: 520px; margin: 12px auto; }
+  .hole { aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 50% 70%, #5b3a1e 0 55%, #8a5a2e 56%); font-size: 64px; display: flex; align-items: center; justify-content: center; }
+  .sky { position: relative; height: 56vh; overflow: hidden; border-radius: 18px; background: linear-gradient(#69b7ff, #d9f1ff); margin: 10px 0; touch-action: manipulation; }
+  .bal { position: absolute; bottom: -90px; font-size: 62px; line-height: 1; background: none; padding: 4px; animation: rise linear forwards; }
+  @keyframes rise { to { transform: translateY(calc(-56vh - 120px)); } }
+  .gsc { text-align: center; font-size: 22px; font-weight: 800; color: #fff; }
+  .tgl { display: inline-block; width: auto; min-height: 44px; padding: 8px 14px; margin: 4px; font-size: 16px; border-radius: 12px; background: #eef1f7; color: var(--text); }
+  .tgl.on { background: #d9f7e4; color: #1f6b3d; font-weight: 800; }
   .pinpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 300px; margin: 10px auto; }
   .pinpad button { font-size: 26px; padding: 14px 0; background: #eef1f7; color: var(--text); border-radius: 12px; }
   .kidbtn { font-size: 30px; min-height: 90px; text-align: center; }
@@ -126,6 +142,8 @@
 <script src="data/dictation.js"></script>
 <script src="data/english.js"></script>
 <script src="data/quiz.js"></script>
+<script src="data/quiz2.js"></script>
+<script src="data/dict-audio.js"></script>
 <script src="data/cards.js"></script>
 <script>
 (function () {
@@ -137,6 +155,8 @@
     if (!d) d = { kids: [{ name: "룰루", cards: {}, streak: 0, lastDay: "", battles: 0 }, { name: "랄라", cards: {}, streak: 0, lastDay: "", battles: 0 }], pin: "2468", day: {}, battleDay: "", cur: -1 };
     if (!d.hist) d.hist = [{}, {}];          // 날짜별 기록: hist[아이][날짜] = { d, e, q, card }
     d.kids.forEach(function (k) { if (!k.badges) k.badges = {}; });
+    if (!d.seen) d.seen = [{}, {}, {}];        // 이미 나온 문제: seen[아이 또는 2=배틀][묶음] = [문제 열쇠…]
+    if (!d.games) d.games = { gmole: true, gballoon: true, gmem: true, g2048: true };   // 부모가 켜 둔 보상 게임
     return d;
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
@@ -155,7 +175,33 @@
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
   function pick(a, n) { return shuffle(a).slice(0, n); }
+  // 아직 안 나온 문제부터 n개 고른다. 다 나오면 기록을 비우고 처음부터.
+  function pickFresh(who, pool, items, n, keyOf) {
+    var seen = S.seen[who][pool] || [], out = [];
+    var fresh = shuffle(items.filter(function (x) { return seen.indexOf(keyOf(x)) < 0; }));
+    out = fresh.slice(0, n);
+    if (out.length < n) {
+      seen = [];
+      var used = out.map(keyOf);
+      out = out.concat(shuffle(items.filter(function (x) { return used.indexOf(keyOf(x)) < 0; })).slice(0, n - out.length));
+    }
+    S.seen[who][pool] = seen.concat(out.map(keyOf)); save();
+    return out;
+  }
+  function leftFresh(who, pool, items, keyOf) { var seen = S.seen[who][pool] || []; return items.filter(function (x) { return seen.indexOf(keyOf(x)) < 0; }).length; }
   function render(html) { app.innerHTML = html; window.scrollTo(0, 0); }
+  // 받아쓰기 문장은 미리 만든 한국어 음성 파일로 읽는다 (패드가 영어 목소리로 한국어를 읽는 문제 방지). 파일이 없으면 패드 음성.
+  var koAudio = null;
+  function sayKo(text) {
+    var f = window.DICT_AUDIO && window.DICT_AUDIO[text];
+    try { if (window.speechSynthesis) speechSynthesis.cancel(); if (koAudio) { koAudio.pause(); koAudio = null; } } catch (e) {}
+    if (!f) return speak(text, "ko-KR");
+    try {
+      koAudio = new Audio("sounds/dict/" + f);
+      koAudio.onerror = function () { speak(text, "ko-KR"); };
+      var pr = koAudio.play(); if (pr && pr.catch) pr.catch(function () { speak(text, "ko-KR"); });
+    } catch (e) { speak(text, "ko-KR"); }
+  }
   function speak(text, lang) {
     try {
       if (!window.speechSynthesis) return false;
@@ -219,7 +265,8 @@
     { id: "setHero", emoji: "👑", name: "위인 친구", hint: "탐험가 카드 10장 모두 모으기", test: function (k) { return setDone(k, "탐험가"); } },
     { id: "battle1", emoji: "⚔️", name: "첫 승리", hint: "형제 배틀에서 처음 이기기", test: function (k) { return k.battles >= 1; } },
     { id: "battle5", emoji: "🏆", name: "배틀 챔피언", hint: "형제 배틀 5승", test: function (k) { return k.battles >= 5; } },
-    { id: "allCards", emoji: "👑", name: "카드 마스터", hint: "카드 30장 전부 모으기", test: function (k) { return Object.keys(k.cards).length >= CARDS.length; } }
+    { id: "setSport", emoji: "⚽", name: "스포츠 팬", hint: "스포츠 카드 10장 모두 모으기", test: function (k) { return setDone(k, "스포츠"); } },
+    { id: "allCards", emoji: "👑", name: "카드 마스터", hint: "카드 " + CARDS.length + "장 전부 모으기", test: function (k) { return Object.keys(k.cards).length >= CARDS.length; } }
   ];
   var toastQ = [], toastOn = false;
   function checkBadges(i, c) {
@@ -263,15 +310,16 @@
   // ---------- 화면: 오늘 미션 ----------
   function screenHome() {
     var k = kid(), d = dayState(S.cur);
+    combo = 0; showCombo();
+    if (d.rewardStart && !d.done && Date.now() - d.rewardStart >= 180000) { d.reward = true; d.done = true; save(); }
     if (d.done) return screenLocked();
     var n = (d.dict ? 1 : 0) + (d.eng ? 1 : 0) + (d.quiz ? 1 : 0);
-    var topic = topicOfDay();
     render(top() +
       '<div class="prog"><div style="width:' + (n / 3 * 100) + '%"></div></div>' +
       '<div class="muted" style="color:#c9d4ea;margin-bottom:6px">오늘 미션 ' + n + '/3 · 다 깨면 카드를 뽑아요 🎁' + (k.streak > 1 ? ' · 🔥 ' + k.streak + '일 연속' : '') + '</div>' +
       '<button class="btn' + (d.dict ? ' done' : '') + '" data-go="dict"' + (d.dict ? ' disabled' : '') + '>✏️ 받아쓰기 ' + esc(dictTitle()) + '<span class="tag">' + (d.dict ? '완료 ⭐' + d.dictok : '5문장') + '</span></button>' +
       '<button class="btn' + (d.eng ? ' done' : '') + '" data-go="eng"' + (d.eng ? ' disabled' : '') + '>🔤 영어 단어<span class="tag">' + (d.eng ? '완료 ⭐' + d.engok : '10단어') + '</span><div class="small" style="color:var(--muted);font-weight:500;margin-top:2px">' + esc(engSet().unit || engSet().week || '') + '</div></button>' +
-      '<button class="btn' + (d.quiz ? ' done' : '') + '" data-go="quiz"' + (d.quiz ? ' disabled' : '') + '>' + QUIZ[topic].emoji + ' 지식 퀴즈: ' + esc(topic) + '<span class="tag">' + (d.quiz ? '완료 ⭐' + d.quizok : '10문제') + '</span></button>' +
+      '<button class="btn' + (d.quiz ? ' done' : '') + '" data-go="quizpick"' + (d.quiz ? ' disabled' : '') + '>🧠 지식 퀴즈' + (d.quiz && d.quizTopic ? ': ' + esc(d.quizTopic) : '') + '<span class="tag">' + (d.quiz ? '완료 ⭐' + d.quizok : '주제 고르기 · 10문제') + '</span></button>' +
       (n === 3 ? '<button class="btn main" data-go="card">🎁 카드 뽑기!</button>' : '') +
       '<div class="row"><button class="btn ghost" data-go="album">📚 카드첩</button><button class="btn ghost" data-go="badges">🏅 배지</button><button class="btn ghost" data-go="stats">📊 기록</button></div>' +
       '<button class="btn ghost" data-go="kids">↩ 대원 바꾸기</button>'
@@ -294,7 +342,7 @@
         : '<p class="muted">아직 기록이 없어요. 첫 미션을 해 보세요!</p>') + '</div>' +
       '<button class="btn ghost" data-go="' + (dayState(S.cur).done ? 'locked' : 'home') + '">↩ 돌아가기</button>');
   }
-  function top() { return '<div class="top"><div class="who">' + (S.cur === 0 ? "🦖 " : "🚀 ") + esc(kid().name) + '<small>카드 ' + Object.keys(kid().cards).length + '장</small></div><button class="btn ghost" style="width:auto;margin:0" data-go="home">🏠</button></div>'; }
+  function top() { return '<div class="top"><div class="who">' + (S.cur === 0 ? "🦖 " : "🚀 ") + esc(kid().name) + '<small>카드 ' + Object.keys(kid().cards).length + '장</small></div><button class="btn ghost homebtn" data-go="home" aria-label="홈">🏠</button></div>'; }
   function topicOfDay() {
     var names = Object.keys(QUIZ); var d = new Date(); var doy = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 86400000);
     return names[(doy + S.cur) % names.length];
@@ -307,17 +355,30 @@
 
   // ---------- 미션: 받아쓰기 ----------
   var M = null; // 진행 중인 미션 상태
-  function startDict() { M = { kind: "dict", items: pick(dictItems(), 5), i: 0, ok: 0, lock: false }; combo = 0; showCombo(); stepDict(); }
+  // 복습용: 지금 급수보다 낮은 급 + 기본 연습 (지금 급수와 겹치는 문장은 뺀다)
+  function dictReview() {
+    var cur = {}, out = [], have = {};
+    dictItems().forEach(function (x) { cur[x.s] = 1; });
+    Object.keys(DICTATION.levels || {}).forEach(function (k) { if (+k < +DICTATION.current) out = out.concat(DICTATION.levels[k].items); });
+    out = out.concat(DICTATION.basic || []);
+    return out.filter(function (x) { if (cur[x.s] || have[x.s]) return false; have[x.s] = 1; return true; });
+  }
+  function startDict() {
+    var keyOf = function (x) { return x.s; }, cur = dictItems(), rev = dictReview();
+    var a = pickFresh(S.cur, "dict" + DICTATION.current, cur, Math.min(rev.length ? 3 : 5, cur.length), keyOf);
+    var b = rev.length ? pickFresh(S.cur, "dictRev", rev, 5 - a.length, keyOf) : [];
+    M = { kind: "dict", items: shuffle(a.concat(b)), i: 0, ok: 0, lock: false }; combo = 0; showCombo(); stepDict();
+  }
   function stepDict() {
-    if (M.i >= M.items.length) return finishMission("dict", M.ok, 5);
+    if (M.i >= M.items.length) return finishMission("dict", M.ok, M.items.length);
     var it = M.items[M.i], typeMode = M.i >= 3;
     var shown = esc(it.s).replace(esc(it.w), '<span class="blank">' + (typeMode ? '&nbsp;?&nbsp;' : '&nbsp;&nbsp;&nbsp;') + '</span>');
-    render(top() + '<div class="muted" style="color:#c9d4ea">받아쓰기 ' + (M.i + 1) + '/5 · ' + (typeMode ? '듣고 직접 써 보기' : '맞는 글자 고르기') + '</div>' +
+    render(top() + '<div class="muted" style="color:#c9d4ea">받아쓰기 ' + (M.i + 1) + '/' + M.items.length + ' · ' + (typeMode ? '듣고 직접 써 보기' : '맞는 글자 고르기') + '</div>' +
       '<div class="panel center"><div class="big" id="sent">' + shown + '</div><button class="speak" data-go="say">🔊 다시 듣기</button></div>' +
       (typeMode ? '<div class="panel"><input class="ans" id="typed" placeholder="빈칸에 들어갈 말" autocomplete="off" autocapitalize="off"><div class="row" style="margin-top:10px"><button class="btn main" data-go="check">확인</button><button class="btn ghost" data-go="giveup">모르겠어요</button></div></div>'
                 : shuffle(it.opts).map(function (o) { return '<button class="btn opt" data-opt="' + esc(o) + '">' + esc(o) + '</button>'; }).join("")) +
       '<div id="fb"></div>');
-    setTimeout(function () { speak(it.s, "ko-KR"); }, 300);
+    setTimeout(function () { sayKo(it.s); }, 300);
     if (typeMode) setTimeout(function () { var e = $("typed"); if (e) e.focus(); }, 400);
   }
   function answerDict(ans) {
@@ -330,39 +391,90 @@
   }
 
   // ---------- 미션: 영어 ----------
+  // 문제 유형: 0 영어→뜻, 1 뜻→영어, 2 문장 빈칸, 3 철자 맞추기, 4 듣고 고르기 (아이별 순서는 data/english.js 의 types)
   function engSet() { return ENGLISH.kids ? (ENGLISH.kids[S.cur] || ENGLISH.kids[0]) : ENGLISH; }
+  function engBlank(w) {
+    if (!w.ex) return null;
+    var re = new RegExp("\\b" + w.en.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i");
+    return re.test(w.ex) ? w.ex.replace(re, "_____") : null;
+  }
   function startEng() {
-    var words = engSet().words; var qs = pick(words, Math.min(10, words.length));
-    M = { kind: "eng", items: qs.map(function (w, i) { return { w: w, type: i % 2 }; }), i: 0, ok: 0, lock: false, all: words }; combo = 0; showCombo(); stepEng();
+    var set = engSet(), words = set.words, types = set.types || [0, 1];
+    var qs = pickFresh(S.cur, "eng", words, Math.min(10, words.length), function (x) { return x.en; });
+    M = { kind: "eng", items: qs.map(function (w, i) {
+      var ty = types[i % types.length];
+      if (ty === 2 && !engBlank(w)) ty = 1;
+      if (ty === 3 && (/\s/.test(w.en) || w.en.length < 3 || w.en.length > 10)) ty = 1;
+      return { w: w, type: ty };
+    }), i: 0, ok: 0, lock: false, all: words };
+    combo = 0; showCombo(); stepEng();
   }
   function stepEng() {
     if (M.i >= M.items.length) return finishMission("eng", M.ok, M.items.length);
-    var q = M.items[M.i], w = q.w, others = pick(M.all.filter(function (x) { return x.en !== w.en; }), 3);
+    var q = M.items[M.i], w = q.w, others = pick(M.all.filter(function (x) { return x.en !== w.en && x.ko !== w.ko; }), 3);
     var opts = shuffle([w].concat(others));
-    if (q.type === 0) {  // 영어 보고·듣고 뜻 고르기
-      render(top() + '<div class="muted" style="color:#c9d4ea">영어 단어 ' + (M.i + 1) + '/' + M.items.length + ' · 무슨 뜻일까?</div>' +
+    var head = '<div class="muted" style="color:#c9d4ea">영어 단어 ' + (M.i + 1) + '/' + M.items.length + ' · ';
+    var optEn = opts.map(function (o) { return '<button class="btn opt" data-opt="' + esc(o.en) + '">' + esc(o.en) + '</button>'; }).join("");
+    M.sp = null;
+    if (q.type === 0) {          // 영어 보고·듣고 뜻 고르기
+      render(top() + head + '무슨 뜻일까?</div>' +
         '<div class="panel center"><div class="huge" style="font-size:52px;font-weight:900">' + esc(w.en) + '</div><button class="speak" data-go="say">🔊 듣기</button></div>' +
         opts.map(function (o) { return '<button class="btn opt" data-opt="' + esc(o.en) + '">' + esc(o.ko) + '</button>'; }).join("") + '<div id="fb"></div>');
       setTimeout(function () { speak(w.en, "en-US"); }, 300);
-    } else {  // 뜻 보고 영어 고르기
-      render(top() + '<div class="muted" style="color:#c9d4ea">영어 단어 ' + (M.i + 1) + '/' + M.items.length + ' · 영어로는?</div>' +
-        '<div class="panel center"><div class="huge" style="font-size:48px;font-weight:900">' + esc(w.ko) + '</div></div>' +
-        opts.map(function (o) { return '<button class="btn opt" data-opt="' + esc(o.en) + '">' + esc(o.en) + '</button>'; }).join("") + '<div id="fb"></div>');
+    } else if (q.type === 1) {   // 뜻 보고 영어 고르기
+      render(top() + head + '영어로는?</div>' +
+        '<div class="panel center"><div class="huge" style="font-size:44px;font-weight:900">' + esc(w.ko) + '</div></div>' + optEn + '<div id="fb"></div>');
+    } else if (q.type === 2) {   // 문장 빈칸
+      render(top() + head + '빈칸에 들어갈 말은?</div>' +
+        '<div class="panel center"><div class="big" style="font-size:32px">' + esc(engBlank(w)) + '</div><p class="muted">뜻: ' + esc(w.ko) + '</p></div>' + optEn + '<div id="fb"></div>');
+    } else if (q.type === 3) {   // 철자 맞추기
+      M.sp = { tiles: shuffle(w.en.split("")), picked: [] };
+      render(top() + head + '글자를 차례로 눌러 단어를 만들어요</div>' +
+        '<div class="panel center"><div class="big" style="font-size:34px">' + esc(w.ko) + '</div><button class="speak" data-go="say">🔊 듣기</button><div><div class="spelled" id="spelled"></div></div></div>' +
+        '<div class="tiles" id="tiles"></div>' +
+        '<div class="row"><button class="btn ghost" data-go="tileback">⌫ 지우기</button><button class="btn ghost" data-go="tilegiveup">모르겠어요</button></div><div id="fb"></div>');
+      drawTiles();
+      setTimeout(function () { speak(w.en, "en-US"); }, 300);
+    } else {                     // 듣고 고르기
+      render(top() + head + '잘 듣고 골라요</div>' +
+        '<div class="panel center"><button class="speak" style="font-size:44px;padding:22px 44px" data-go="say">🔊</button><p class="muted">다시 들으려면 눌러요</p></div>' + optEn + '<div id="fb"></div>');
+      setTimeout(function () { speak(w.en, "en-US"); }, 300);
     }
+  }
+  function drawTiles() {
+    var sp = M.sp; if (!sp || !$("tiles")) return;
+    $("tiles").innerHTML = sp.tiles.map(function (ch, i) { return '<button class="tile" data-tile="' + i + '"' + (sp.picked.indexOf(i) >= 0 ? ' disabled' : '') + '>' + esc(ch) + '</button>'; }).join("");
+    $("spelled").textContent = sp.picked.map(function (i) { return sp.tiles[i]; }).join("");
+  }
+  function tapTile(i) {
+    var sp = M.sp; if (M.lock || !sp || sp.picked.indexOf(i) >= 0) return;
+    sp.picked.push(i); beep("tick"); drawTiles();
+    if (sp.picked.length === sp.tiles.length) answerEng(sp.picked.map(function (k) { return sp.tiles[k]; }).join(""));
   }
   function answerEng(ans) {
     if (M.lock) return; M.lock = true;
-    var w = M.items[M.i].w, ok = ans === w.en;
+    var w = M.items[M.i].w, ok = String(ans || "").toLowerCase() === w.en.toLowerCase();
     if (ok) { M.ok++; right(); } else wrong();
     document.querySelectorAll("[data-opt]").forEach(function (b) { b.disabled = true; if (b.getAttribute("data-opt") === w.en) b.classList.add("good"); else if (b.getAttribute("data-opt") === ans) b.classList.add("bad"); });
+    document.querySelectorAll("[data-tile]").forEach(function (b) { b.disabled = true; });
     speak(w.en, "en-US");
-    $("fb").innerHTML = '<div class="panel center"><div class="big">' + (ok ? '정답! 🎉' : '아쉽다!') + '</div><p><b>' + esc(w.en) + '</b> = ' + esc(w.ko) + (w.ex ? '<br><span class="muted">' + esc(w.ex) + '</span>' : '') + '</p><button class="btn main" data-go="next">다음 ➜</button></div>';
+    $("fb").innerHTML = '<div class="panel center"><div class="big">' + (ok ? '정답! 🎉' : '아쉽다!') + '</div><p><b style="font-size:28px">' + esc(w.en) + '</b> = ' + esc(w.ko) + (w.ex ? '<br><span class="muted">' + esc(w.ex) + '</span>' : '') + '</p><button class="btn main" data-go="next">다음 ➜</button></div>';
   }
 
   // ---------- 미션: 지식 퀴즈 ----------
+  function quizKey(x) { return x.q; }
+  function screenQuizPick() {
+    var rec = topicOfDay();
+    render(top() + '<div class="panel center"><div class="big" style="font-size:28px">어떤 주제로 풀까?</div><p class="muted">주제마다 10문제. 안 풀어 본 문제가 먼저 나와요.</p></div>' +
+      Object.keys(QUIZ).map(function (t) {
+        var left = leftFresh(S.cur, "quiz:" + t, QUIZ[t].items, quizKey);
+        return '<button class="btn" data-qtopic="' + esc(t) + '">' + QUIZ[t].emoji + ' ' + esc(t) + (t === rec ? ' ⭐' : '') + '<span class="tag">새 문제 ' + left + '개</span></button>';
+      }).join(""));
+  }
   function startQuiz(topic, n) {
     var items = QUIZ[topic].items;
-    M = { kind: "quiz", topic: topic, items: pick(items, Math.min(n || 10, items.length)), i: 0, ok: 0, lock: false }; combo = 0; showCombo(); stepQuiz();
+    dayState(S.cur).quizTopic = topic;
+    M = { kind: "quiz", topic: topic, items: pickFresh(S.cur, "quiz:" + topic, items, Math.min(n || 10, items.length), quizKey), i: 0, ok: 0, lock: false }; combo = 0; showCombo(); stepQuiz();
   }
   function stepQuiz() {
     if (M.i >= M.items.length) return M.battle ? battleNext() : finishMission("quiz", M.ok, M.items.length);
@@ -386,6 +498,7 @@
     var d = dayState(S.cur); d[kind] = true; d[kind + "ok"] = ok;
     var h = S.hist[S.cur][today()] = S.hist[S.cur][today()] || {}; h[kind[0]] = ok; save();
     checkBadges(S.cur, { kind: kind, ok: ok, total: total });
+    combo = 0; showCombo();
     confetti(80); beep("card");
     var n = (d.dict ? 1 : 0) + (d.eng ? 1 : 0) + (d.quiz ? 1 : 0);
     render(top() + '<div class="panel center"><div class="huge">' + (ok === total ? '🏆' : ok >= total * 0.6 ? '🌟' : '💪') + '</div><div class="big">' + ok + ' / ' + total + ' 맞혔어요!</div>' +
@@ -418,57 +531,131 @@
   }
 
   // ---------- 보상 게임 ----------
-  var timerId = null, timeLeft = 0;
+  // 네 가지 게임을 합쳐 하루 3분. 시작한 시각(d.rewardStart)을 저장해 두어서, 게임을 바꾸거나 새로 고쳐도 시간이 다시 차지 않는다.
+  var timerId = null, G = null;
+  var GAMES = [["gmole", "🔨 두더지 잡기"], ["gballoon", "🎈 풍선 터뜨리기"], ["gmem", "🃏 기억력 카드"], ["g2048", "🔢 숫자 합치기 2048"]];
+  function stopGame() { if (G && G.iv) clearInterval(G.iv); document.onkeydown = null; G = null; }
+  function rewardLeft(i) { var d = dayState(i); if (!d.rewardStart) { d.rewardStart = Date.now(); save(); } return 180 - Math.floor((Date.now() - d.rewardStart) / 1000); }
+  function fmtLeft(s) { s = Math.max(s, 0); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
   function screenReward() {
-    var d = dayState(S.cur);
+    var d = dayState(S.cur); stopGame();
     if (d.reward) return finishDay();
-    render(top() + '<div class="panel center"><div class="big">보상 게임을 골라요</div><p class="muted">3분이 지나면 오늘 탐험이 끝나요.</p></div>' +
-      '<button class="btn" data-go="g2048">🔢 2048</button><button class="btn" data-go="gmem">🃏 기억력 카드</button>');
+    if (d.rewardStart && rewardLeft(S.cur) <= 0) return endReward();
+    var on = GAMES.filter(function (g) { return S.games[g[0]]; }); if (!on.length) on = GAMES;
+    render(top() + '<div class="panel center"><div class="big">보상 게임을 골라요</div><p class="muted">' +
+      (d.rewardStart ? '남은 시간 ' + fmtLeft(rewardLeft(S.cur)) + ' · 게임을 바꿔도 시간은 이어져요.' : '모두 합쳐 3분! 시간이 끝나면 오늘 탐험이 끝나요.') + '</p></div>' +
+      on.map(function (g) { return '<button class="btn" data-go="' + g[0] + '">' + g[1] + '</button>'; }).join(""));
   }
-  function startTimer(onEnd) {
-    timeLeft = 180; clearInterval(timerId);
-    timerId = setInterval(function () { timeLeft--; var t = $("timer"); if (t) t.textContent = "⏱ " + Math.floor(timeLeft / 60) + ":" + String(timeLeft % 60).padStart(2, "0"); if (timeLeft <= 0) { clearInterval(timerId); onEnd(); } }, 1000);
+  function startTimer() {
+    var who = S.cur; clearInterval(timerId);
+    function tick() {
+      if (S.cur !== who) { clearInterval(timerId); return; }
+      var left = rewardLeft(who), el = $("timer"); if (el) el.textContent = "⏱ " + fmtLeft(left);
+      if (left <= 0) endReward();
+    }
+    tick(); timerId = setInterval(tick, 1000);
   }
-  function endReward() { clearInterval(timerId); var d = dayState(S.cur); d.reward = true; save(); finishDay(); }
+  function endReward() { clearInterval(timerId); stopGame(); var d = dayState(S.cur); d.reward = true; save(); finishDay(); }
   function finishDay() { var d = dayState(S.cur); d.done = true; save(); screenLocked(); }
   function screenLocked() {
     var d = dayState(S.cur); var c = d.card ? CARDS.filter(function (x) { return x.id === d.card; })[0] : null;
+    combo = 0; showCombo();
     render(top() + '<div class="panel center"><div class="huge">🌙</div><div class="big">오늘 탐험 완료!</div><p>내일 새 미션과 새 카드가 기다려요.</p>' + (c ? '<p class="huge">' + c.emoji + '</p><p><b>' + esc(c.name) + '</b></p>' : '') + '</div>' +
       '<div class="row"><button class="btn ghost" data-go="album">📚 카드첩</button><button class="btn ghost" data-go="badges">🏅 배지</button><button class="btn ghost" data-go="stats">📊 기록</button></div><button class="btn ghost" data-go="kids">↩ 대원 바꾸기</button><button class="btn ghost small" data-go="parent">🔒 부모님</button>');
   }
-  // 2048
-  var G = null;
+  function gameTop(hint) { return top() + '<div class="timer" id="timer">⏱ 3:00</div><div class="gsc">' + hint + ' · 점수 <span id="sc">0</span></div>'; }
+  function gameFoot() { return '<div class="row"><button class="btn ghost" data-go="reward">🎮 다른 게임</button><button class="btn ghost" data-go="endreward">그만하고 끝내기</button></div>'; }
+  function setScore(n) { var el = $("sc"); if (el) el.textContent = n; }
+
+  // 숫자 합치기 2048: 판을 밀어도 되고, 아래 큰 화살표를 눌러도 된다
   function start2048() {
-    G = { b: [], score: 0 }; for (var i = 0; i < 16; i++) G.b.push(0); add2048(); add2048();
-    render(top() + '<div class="timer" id="timer">⏱ 3:00</div><div class="center muted" style="color:#c9d4ea">밀어서 같은 숫자를 합쳐요 · 점수 <b id="sc">0</b></div><div class="g2048" id="g2048"></div><button class="btn ghost" data-go="endreward">그만하고 끝내기</button>');
-    draw2048(); startTimer(endReward);
-    var el = $("g2048"), sx = 0, sy = 0;
-    el.addEventListener("touchstart", function (e) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
-    el.addEventListener("touchend", function (e) { var dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy; if (Math.abs(dx) < 20 && Math.abs(dy) < 20) return; move2048(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "r" : "l") : (dy > 0 ? "d" : "u")); });
-    document.onkeydown = function (e) { var m = { ArrowLeft: "l", ArrowRight: "r", ArrowUp: "u", ArrowDown: "d" }[e.key]; if (m && G) { e.preventDefault(); move2048(m); } };
+    stopGame(); G = { b: [], score: 0 }; for (var i = 0; i < 16; i++) G.b.push(0); add2048(); add2048();
+    render(gameTop("밀거나 화살표를 눌러요") +
+      '<div id="swipe" style="touch-action:none;padding:6px 0"><div class="g2048" id="g2048"></div></div>' +
+      '<div class="arrows"><div><button data-mv="u" aria-label="위">⬆</button></div><div><button data-mv="l" aria-label="왼쪽">⬅</button><button data-mv="d" aria-label="아래">⬇</button><button data-mv="r" aria-label="오른쪽">➡</button></div></div>' + gameFoot());
+    draw2048(); startTimer();
+    var el = $("swipe"), sx = null, sy = 0;
+    el.addEventListener("pointerdown", function (e) { sx = e.clientX; sy = e.clientY; });
+    el.addEventListener("pointermove", function (e) {        // 손가락을 떼기 전에, 조금만 밀어도 바로 움직인다
+      if (sx === null) return;
+      var dx = e.clientX - sx, dy = e.clientY - sy;
+      if (Math.abs(dx) < 22 && Math.abs(dy) < 22) return;
+      sx = null; move2048(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "r" : "l") : (dy > 0 ? "d" : "u"));
+    });
+    el.addEventListener("pointerup", function () { sx = null; });
+    el.addEventListener("pointercancel", function () { sx = null; });
+    document.onkeydown = function (e) { var m = { ArrowLeft: "l", ArrowRight: "r", ArrowUp: "u", ArrowDown: "d" }[e.key]; if (m && G && G.b) { e.preventDefault(); move2048(m); } };
   }
   function add2048() { var e = []; G.b.forEach(function (v, i) { if (!v) e.push(i); }); if (!e.length) return; G.b[e[Math.floor(Math.random() * e.length)]] = Math.random() < .9 ? 2 : 4; }
-  function draw2048() { $("g2048").innerHTML = G.b.map(function (v) { return '<div class="t v' + v + '">' + (v || "") + '</div>'; }).join(""); $("sc").textContent = G.score; }
+  function draw2048() { var el = $("g2048"); if (!el) return; el.innerHTML = G.b.map(function (v) { return '<div class="t v' + v + '">' + (v || "") + '</div>'; }).join(""); setScore(G.score); }
   function move2048(dir) {
+    if (!G || !G.b) return;
     var b = G.b, moved = false;
     function line(idx) { var vals = idx.map(function (i) { return b[i]; }).filter(Boolean), out = []; for (var i = 0; i < vals.length; i++) { if (vals[i] === vals[i + 1]) { out.push(vals[i] * 2); G.score += vals[i] * 2; i++; } else out.push(vals[i]); } while (out.length < 4) out.push(0); idx.forEach(function (i, k) { if (b[i] !== out[k]) moved = true; b[i] = out[k]; }); }
     for (var r = 0; r < 4; r++) { var idx = []; for (var c = 0; c < 4; c++) idx.push(dir === "l" || dir === "r" ? r * 4 + c : c * 4 + r); if (dir === "r" || dir === "d") idx.reverse(); line(idx); }
     if (moved) { add2048(); beep("tick"); } draw2048();
   }
-  // 기억력
+
+  // 기억력 카드
   function startMem() {
+    stopGame();
     var ems = pick(["🦖", "🚀", "🐯", "🍕", "⚽", "🎸", "🐙", "🦁", "🍩", "🛸"], 6), deck = shuffle(ems.concat(ems));
-    G = { deck: deck, open: [], ok: 0, lock: false, moves: 0 };
-    render(top() + '<div class="timer" id="timer">⏱ 3:00</div><div class="center muted" style="color:#c9d4ea">같은 그림 두 장을 찾아요</div><div class="mem" id="mem"></div><button class="btn ghost" data-go="endreward">그만하고 끝내기</button>');
-    drawMem(); startTimer(endReward);
+    G = { deck: deck, open: [], ok: 0, lock: false, score: 0, done: {} };
+    render(gameTop("같은 그림 두 장을 찾아요") + '<div class="mem" id="mem"></div>' + gameFoot());
+    drawMem(); startTimer();
   }
-  function drawMem() { $("mem").innerHTML = G.deck.map(function (e, i) { var st = G.done && G.done[i] ? "ok" : G.open.indexOf(i) >= 0 ? "open" : ""; return '<div class="mc ' + st + '" data-mem="' + i + '">' + (st ? e : "") + '</div>'; }).join(""); }
+  function drawMem() { var el = $("mem"); if (!el || !G || !G.deck) return; el.innerHTML = G.deck.map(function (e, i) { var st = G.done[i] ? "ok" : G.open.indexOf(i) >= 0 ? "open" : ""; return '<div class="mc ' + st + '" data-mem="' + i + '">' + (st ? e : "") + '</div>'; }).join(""); }
   function tapMem(i) {
-    if (G.lock || G.open.indexOf(i) >= 0 || (G.done && G.done[i])) return;
+    if (!G || !G.deck || G.lock || G.open.indexOf(i) >= 0 || G.done[i]) return;
     G.open.push(i); drawMem();
-    if (G.open.length === 2) { G.lock = true; G.moves++; var a = G.open[0], c = G.open[1]; G.done = G.done || {};
-      setTimeout(function () { if (G.deck[a] === G.deck[c]) { G.done[a] = G.done[c] = true; G.ok++; right(); } else beep("tick"); G.open = []; G.lock = false; drawMem();
-        if (G.ok === 6) { confetti(100); G.deck = shuffle(G.deck); G.done = {}; G.ok = 0; setTimeout(drawMem, 800); } }, 600); }
+    if (G.open.length === 2) { G.lock = true; var a = G.open[0], c = G.open[1], g = G;
+      setTimeout(function () { if (G !== g) return;
+        if (g.deck[a] === g.deck[c]) { g.done[a] = g.done[c] = true; g.ok++; g.score++; setScore(g.score); right(); } else beep("tick");
+        g.open = []; g.lock = false; drawMem();
+        if (g.ok === 6) { confetti(100); setTimeout(function () { if (G !== g) return; g.deck = shuffle(g.deck); g.done = {}; g.ok = 0; drawMem(); }, 800); } }, 600); }
+  }
+
+  // 두더지 잡기: 나온 두더지를 톡! 별은 3점
+  function startMole() {
+    stopGame(); G = { score: 0, cur: -1, hit: false, gold: false };
+    var holes = ""; for (var i = 0; i < 9; i++) holes += '<button class="hole" data-hole="' + i + '"></button>';
+    render(gameTop("두더지를 톡! ⭐는 3점") + '<div class="moles" id="moles">' + holes + '</div>' + gameFoot());
+    startTimer();
+    var g = G;
+    function pop() {
+      if (G !== g || !$("moles")) { clearInterval(g.iv); return; }
+      var n; do { n = Math.floor(Math.random() * 9); } while (n === g.cur);
+      g.cur = n; g.hit = false; g.gold = Math.random() < .15; drawMole();
+    }
+    pop(); g.iv = setInterval(pop, 850);
+  }
+  function drawMole() { document.querySelectorAll("[data-hole]").forEach(function (h, i) { h.textContent = i === G.cur ? (G.hit ? "💥" : G.gold ? "⭐" : "🐹") : ""; }); }
+  function tapHole(i) {
+    if (!G || G.cur === undefined || i !== G.cur || G.hit) return;
+    G.hit = true; G.score += G.gold ? 3 : 1; setScore(G.score); beep("good"); drawMole();
+  }
+
+  // 풍선 터뜨리기: 올라오는 풍선을 톡! 별은 3점
+  function startBalloon() {
+    stopGame(); G = { score: 0 };
+    render(gameTop("풍선을 톡! ⭐는 3점") + '<div class="sky" id="sky"></div>' + gameFoot());
+    startTimer();
+    var g = G;
+    function spawn() {
+      var sky = $("sky"); if (G !== g || !sky) { clearInterval(g.iv); return; }
+      var gold = Math.random() < .12, b = document.createElement("button");
+      b.className = "bal"; b.textContent = gold ? "⭐" : "🎈"; b.setAttribute("data-bal", gold ? 3 : 1);
+      b.style.left = (2 + Math.random() * 82) + "%"; b.style.animationDuration = (3.2 + Math.random() * 2.6) + "s";
+      b.style.filter = gold ? "" : "hue-rotate(" + Math.floor(Math.random() * 360) + "deg)";
+      b.addEventListener("animationend", function () { b.remove(); });
+      sky.appendChild(b);
+    }
+    spawn(); g.iv = setInterval(spawn, 520);
+  }
+  function tapBalloon(b) {
+    if (!G || b.getAttribute("data-pop")) return;
+    b.setAttribute("data-pop", "1"); G.score += +b.getAttribute("data-bal"); setScore(G.score); beep("good");
+    b.textContent = "💥"; b.style.animationPlayState = "paused"; setTimeout(function () { b.remove(); }, 160);
   }
 
   // ---------- 형제 배틀 ----------
@@ -480,7 +667,7 @@
   }
   function startBattle(topic) {
     var items = QUIZ[topic].items;
-    M = { kind: "quiz", topic: topic, items: pick(items, Math.min(10, items.length)), i: 0, ok: 0, lock: false, battle: true, sc: [0, 0], turn: 0 };
+    M = { kind: "quiz", topic: topic, items: pickFresh(2, "quiz:" + topic, items, Math.min(10, items.length), quizKey), i: 0, ok: 0, lock: false, battle: true, sc: [0, 0], turn: 0 };
     combo = 0; showCombo(); stepQuiz();
   }
   function battleNext() {
@@ -507,34 +694,46 @@
   }
   function screenParentMenu() {
     render('<div class="panel"><h2>부모님 메뉴</h2>' +
-      S.kids.map(function (k, i) { var d = dayState(i), h = (S.hist[i] || {})[today()] || {}; return '<p><b>' + esc(k.name || ("대원 " + (i + 1))) + '</b> · 오늘 ' + (d.done ? '완료(잠김)' : '진행 중') + ' · ✏️' + (h.d != null ? h.d : '-') + ' 🔤' + (h.e != null ? h.e : '-') + ' 🦖' + (h.q != null ? h.q : '-') + ' · 카드 ' + Object.keys(k.cards).length + '장 · 연속 ' + k.streak + '일' + (d.done ? ' <button class="btn ghost" style="display:inline-block;width:auto;min-height:40px;padding:6px 12px;font-size:15px;color:#1f2430;background:#eef1f7" data-unlock="' + i + '">오늘 다시 열기</button>' : '') + '</p>'; }).join("") +
+      S.kids.map(function (k, i) { var d = dayState(i), h = (S.hist[i] || {})[today()] || {}; return '<p><b>' + esc(k.name || ("대원 " + (i + 1))) + '</b> · 오늘 ' + (d.done ? '완료(잠김)' : '진행 중') + ' · ✏️' + (h.d != null ? h.d : '-') + ' 🔤' + (h.e != null ? h.e : '-') + ' 🦖' + (h.q != null ? h.q : '-') + ' · 카드 ' + Object.keys(k.cards).length + '장 · 연속 ' + k.streak + '일' + ' <button class="tgl" data-redo="' + i + '">오늘 미션 처음부터 다시</button>' + (d.done ? '<button class="tgl" data-unlock="' + i + '">잠금만 풀기</button>' : '') + '</p>'; }).join("") +
+      '<p><b>보상 게임 고르기</b> (초록색이 켜진 것)<br>' + GAMES.map(function (g) { return '<button class="tgl' + (S.games[g[0]] ? ' on' : '') + '" data-toggle="' + g[0] + '">' + g[1] + '</button>'; }).join("") + '</p>' +
       '<p class="muted">받아쓰기 급수: ' + esc(dictTitle()) + (ENGLISH.kids ? ENGLISH.kids.map(function (e, i) { return '<br>영어(' + esc(S.kids[i].name) + '): ' + esc(e.book) + ' · ' + esc(e.week); }).join("") : ' · 영어: ' + esc(ENGLISH.week)) + '</p>' +
       '<button class="btn" data-go="names" style="box-shadow:none;background:#eef1f7">이름 바꾸기</button>' +
       '<button class="btn" data-go="resetbattle" style="box-shadow:none;background:#eef1f7">오늘 배틀 다시 열기</button>' +
+      '<button class="btn" data-go="resetseen" style="box-shadow:none;background:#eef1f7">나온 문제 기록 지우기 (처음 문제부터 다시)</button>' +
       '<button class="btn ghost" data-go="kids" style="color:#1f2430">닫기</button></div>');
   }
 
   // ---------- 이벤트 ----------
   app.addEventListener("click", function (e) {
     var b = e.target.closest("button"); if (!b) return;
-    var kidIdx = b.getAttribute("data-kid"), go = b.getAttribute("data-go"), opt = b.getAttribute("data-opt"), topic = b.getAttribute("data-topic"), pin = b.getAttribute("data-pin"), unlock = b.getAttribute("data-unlock");
+    var kidIdx = b.getAttribute("data-kid"), go = b.getAttribute("data-go"), opt = b.getAttribute("data-opt"), topic = b.getAttribute("data-topic"), pin = b.getAttribute("data-pin"), unlock = b.getAttribute("data-unlock"), redo = b.getAttribute("data-redo");
     if (kidIdx !== null) { S.cur = +kidIdx; save(); return screenHome(); }
     if (opt !== null) { if (M.kind === "dict") answerDict(opt); else if (M.kind === "eng") answerEng(opt); else answerQuiz(b); return; }
     if (topic) return startBattle(topic);
+    if (b.hasAttribute("data-qtopic")) return startQuiz(b.getAttribute("data-qtopic"), 10);
+    if (b.hasAttribute("data-tile")) return tapTile(+b.getAttribute("data-tile"));
+    if (b.hasAttribute("data-mv")) return move2048(b.getAttribute("data-mv"));
+    if (b.hasAttribute("data-hole")) return tapHole(+b.getAttribute("data-hole"));
+    if (b.hasAttribute("data-bal")) return tapBalloon(b);
+    if (b.hasAttribute("data-toggle")) { var gk = b.getAttribute("data-toggle"); S.games[gk] = !S.games[gk]; save(); return screenParentMenu(); }
+    if (redo !== null) { dayState(+redo); S.day.k[+redo] = {}; save(); return screenParentMenu(); }
     if (pin !== null) {
       if (pin === "←") pinBuf = pinBuf.slice(0, -1); else if (pin === "확인") { if (pinBuf === S.pin) return screenParentMenu(); pinBuf = ""; beep("bad"); } else if (pinBuf.length < 4) pinBuf += pin;
       $("pinv").textContent = (pinBuf + "····").slice(0, 4).replace(/\d/g, "●"); return;
     }
-    if (unlock !== null) { var d = dayState(+unlock); d.done = false; d.reward = false; save(); return screenParentMenu(); }
+    if (unlock !== null) { var d = dayState(+unlock); d.done = false; d.reward = false; delete d.rewardStart; save(); return screenParentMenu(); }
     switch (go) {
-      case "kids": return screenKids();
-      case "home": return screenHome();
+      case "kids": stopGame(); clearInterval(timerId); combo = 0; showCombo(); return screenKids();
+      case "home": stopGame(); return screenHome();
       case "savenames": S.kids[0].name = ($("n0").value || "첫째").trim(); S.kids[1].name = ($("n1").value || "둘째").trim(); save(); return screenKids();
       case "names": return screenNames();
       case "dict": return startDict();
       case "eng": return startEng();
+      case "quizpick": return screenQuizPick();
       case "quiz": return startQuiz(topicOfDay(), 10);
-      case "say": var it = M.items[M.i]; return speak(M.kind === "eng" ? it.w.en : it.s, M.kind === "eng" ? "en-US" : "ko-KR");
+      case "say": var it = M.items[M.i]; return M.kind === "eng" ? speak(it.w.en, "en-US") : sayKo(it.s);
+      case "tileback": if (M.sp && !M.lock) { M.sp.picked.pop(); drawTiles(); } return;
+      case "tilegiveup": return answerEng("");
       case "check": return answerDict(($("typed").value || "").trim());
       case "giveup": return answerDict("");
       case "next": M.i++; M.lock = false; if (M.battle) M.turn = 1 - M.turn; return M.kind === "dict" ? stepDict() : M.kind === "eng" ? stepEng() : stepQuiz();
@@ -542,6 +741,9 @@
       case "reward": return screenReward();
       case "g2048": return start2048();
       case "gmem": return startMem();
+      case "gmole": return startMole();
+      case "gballoon": return startBalloon();
+      case "resetseen": S.seen = [{}, {}, {}]; save(); return screenParentMenu();
       case "endreward": return endReward();
       case "album": return screenAlbum();
       case "stats": return screenStats();
