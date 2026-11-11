@@ -81,6 +81,13 @@
   .mc.open { background: #fff; } .mc.ok { background: #d9f7e4; }
   .timer { font-size: 20px; font-weight: 800; color: var(--gold); text-align: center; }
   canvas#fx { position: fixed; inset: 0; pointer-events: none; z-index: 9; }
+  .toast { position: fixed; left: 50%; top: 18%; transform: translate(-50%, -20px) scale(.9); background: linear-gradient(135deg, #fff7d6, #ffe08a); color: #3a2a00; border-radius: 22px; padding: 18px 26px; text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,.4); z-index: 20; display: none; min-width: 260px; max-width: 90vw; }
+  .toast.on { display: block; animation: pop .5s ease-out forwards; }
+  @keyframes pop { 0% { opacity: 0; transform: translate(-50%, -20px) scale(.8); } 60% { transform: translate(-50%, 0) scale(1.06); } 100% { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+  .toast .em { font-size: 64px; line-height: 1.1; } .toast .t1 { font-size: 15px; font-weight: 700; letter-spacing: .08em; } .toast .t2 { font-size: 26px; font-weight: 900; } .toast .t3 { font-size: 15px; opacity: .8; }
+  .bd { display: flex; align-items: center; gap: 12px; background: #fff; color: var(--text); border-radius: 14px; padding: 10px 14px; margin-bottom: 8px; border: 3px solid var(--gold); }
+  .bd.no { background: rgba(255,255,255,.1); color: #c9d4ea; border-color: transparent; }
+  .bd .em { font-size: 40px; width: 52px; text-align: center; } .bd .nm { font-weight: 800; font-size: 18px; } .bd .hint { font-size: 14px; opacity: .8; }
   .pinpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 300px; margin: 10px auto; }
   .pinpad button { font-size: 26px; padding: 14px 0; background: #eef1f7; color: var(--text); border-radius: 12px; }
   .kidbtn { font-size: 30px; min-height: 90px; text-align: center; }
@@ -113,6 +120,7 @@
 <body>
 <canvas id="fx"></canvas>
 <div class="combo" id="combo"></div>
+<div class="toast" id="toast"></div>
 <div class="wrap" id="app"></div>
 
 <script src="data/dictation.js"></script>
@@ -128,6 +136,7 @@
     var d = null; try { d = JSON.parse(localStorage.getItem(KEY) || "null"); } catch (e) {}
     if (!d) d = { kids: [{ name: "룰루", cards: {}, streak: 0, lastDay: "", battles: 0 }, { name: "랄라", cards: {}, streak: 0, lastDay: "", battles: 0 }], pin: "2468", day: {}, battleDay: "", cur: -1 };
     if (!d.hist) d.hist = [{}, {}];          // 날짜별 기록: hist[아이][날짜] = { d, e, q, card }
+    d.kids.forEach(function (k) { if (!k.badges) k.badges = {}; });
     return d;
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
@@ -171,7 +180,7 @@
   var fx = $("fx"), fctx = fx.getContext("2d"), parts = [];
   function sizeFx() { fx.width = innerWidth; fx.height = innerHeight; } sizeFx(); addEventListener("resize", sizeFx);
   function confetti(n) {
-    for (var i = 0; i < (n || 60); i++) parts.push({ x: innerWidth / 2, y: innerHeight / 2, vx: (Math.random() - .5) * 16, vy: -Math.random() * 14 - 4, c: ["#ff8c42", "#ffd166", "#2ecc71", "#4aa3ff", "#9b6bff", "#ff5c5c"][i % 6], s: 6 + Math.random() * 8, a: 1 });
+    for (var i = 0; i < (n || 60); i++) parts.push({ x: innerWidth / 2 + (Math.random() - .5) * innerWidth * .6, y: innerHeight * .45 + (Math.random() - .5) * 120, vx: (Math.random() - .5) * 16, vy: -Math.random() * 14 - 4, c: ["#ff8c42", "#ffd166", "#2ecc71", "#4aa3ff", "#9b6bff", "#ff5c5c"][i % 6], s: 6 + Math.random() * 8, a: 1 });
     if (!fxOn) { fxOn = true; requestAnimationFrame(tickFx); }
   }
   var fxOn = false;
@@ -185,6 +194,52 @@
   function showCombo() { var c = $("combo"); if (combo >= 2) { c.textContent = "🔥 " + combo + " 콤보!"; c.style.display = "block"; } else c.style.display = "none"; }
   function right() { combo++; showCombo(); beep("good"); confetti(combo >= 3 ? 50 : 20); }
   function wrong() { combo = 0; showCombo(); beep("bad"); }
+
+  // ---------- 배지 ----------
+  // test(k, c): k 아이, c 방금 일어난 일 { kind, ok, total, card, win, dayDone }
+  function playedDays(i) { var H = S.hist[i] || {}; return Object.keys(H).filter(function (d) { return H[d].card; }).length; }
+  function setDone(k, set) { return CARDS.filter(function (c) { return c.set === set; }).every(function (c) { return k.cards[c.id]; }); }
+  var BADGES = [
+    { id: "first", emoji: "🧭", name: "첫 탐험", hint: "미션 3개를 처음으로 다 깨기", test: function (k, c) { return c.dayDone; } },
+    { id: "streak3", emoji: "🔥", name: "3일 연속", hint: "3일 연속으로 탐험하기", test: function (k) { return k.streak >= 3; } },
+    { id: "streak7", emoji: "🌋", name: "일주일 불꽃", hint: "7일 연속으로 탐험하기", test: function (k) { return k.streak >= 7; } },
+    { id: "streak14", emoji: "☄️", name: "2주 불꽃", hint: "14일 연속으로 탐험하기", test: function (k) { return k.streak >= 14; } },
+    { id: "days10", emoji: "🗺️", name: "탐험 10일", hint: "탐험한 날이 10일", test: function (k, c) { return playedDays(c.i) >= 10; } },
+    { id: "days30", emoji: "🏔️", name: "탐험 30일", hint: "탐험한 날이 30일", test: function (k, c) { return playedDays(c.i) >= 30; } },
+    { id: "dictP", emoji: "✏️", name: "받아쓰기 만점", hint: "받아쓰기 5문장 다 맞히기", test: function (k, c) { return c.kind === "dict" && c.ok === c.total; } },
+    { id: "engP", emoji: "🔤", name: "영어 만점", hint: "영어 단어 10개 다 맞히기", test: function (k, c) { return c.kind === "eng" && c.ok === c.total; } },
+    { id: "quizP", emoji: "🧠", name: "퀴즈 만점", hint: "지식 퀴즈 10문제 다 맞히기", test: function (k, c) { return c.kind === "quiz" && c.ok === c.total; } },
+    { id: "allP", emoji: "💎", name: "완벽한 하루", hint: "하루에 미션 3개 모두 만점", test: function (k, c) { var h = (S.hist[c.i] || {})[today()] || {}; return c.dayDone && h.d === 5 && h.e === 10 && h.q === 10; } },
+    { id: "cards5", emoji: "🎁", name: "카드 5장", hint: "서로 다른 카드 5장 모으기", test: function (k) { return Object.keys(k.cards).length >= 5; } },
+    { id: "cards10", emoji: "📦", name: "카드 10장", hint: "서로 다른 카드 10장 모으기", test: function (k) { return Object.keys(k.cards).length >= 10; } },
+    { id: "cards20", emoji: "🏺", name: "카드 20장", hint: "서로 다른 카드 20장 모으기", test: function (k) { return Object.keys(k.cards).length >= 20; } },
+    { id: "legend", emoji: "🌟", name: "전설의 카드", hint: "전설 등급 카드 뽑기", test: function (k, c) { return c.card && c.card.grade === 3; } },
+    { id: "setDino", emoji: "🦖", name: "공룡 박사", hint: "공룡 카드 10장 모두 모으기", test: function (k) { return setDone(k, "공룡"); } },
+    { id: "setSpace", emoji: "🚀", name: "우주 대장", hint: "우주 카드 10장 모두 모으기", test: function (k) { return setDone(k, "우주"); } },
+    { id: "setHero", emoji: "👑", name: "위인 친구", hint: "탐험가 카드 10장 모두 모으기", test: function (k) { return setDone(k, "탐험가"); } },
+    { id: "battle1", emoji: "⚔️", name: "첫 승리", hint: "형제 배틀에서 처음 이기기", test: function (k) { return k.battles >= 1; } },
+    { id: "battle5", emoji: "🏆", name: "배틀 챔피언", hint: "형제 배틀 5승", test: function (k) { return k.battles >= 5; } },
+    { id: "allCards", emoji: "👑", name: "카드 마스터", hint: "카드 30장 전부 모으기", test: function (k) { return Object.keys(k.cards).length >= CARDS.length; } }
+  ];
+  var toastQ = [], toastOn = false;
+  function checkBadges(i, c) {
+    var k = S.kids[i]; c = c || {}; c.i = i; var got = [];
+    BADGES.forEach(function (b) { if (!k.badges[b.id]) { try { if (b.test(k, c)) { k.badges[b.id] = today(); got.push(b); } } catch (e) {} } });
+    if (got.length) { save(); got.forEach(function (b) { toastQ.push(b); }); showToast(); }
+  }
+  function showToast() {
+    if (toastOn || !toastQ.length) return; toastOn = true;
+    var b = toastQ.shift(), el = $("toast");
+    el.innerHTML = '<div class="em">' + b.emoji + '</div><div class="t1">🏅 배지 획득!</div><div class="t2">' + esc(b.name) + '</div><div class="t3">' + esc(b.hint) + '</div>';
+    el.classList.add("on"); beep("card"); confetti(60);
+    setTimeout(function () { el.classList.remove("on"); toastOn = false; setTimeout(showToast, 250); }, 2600);
+  }
+  function screenBadges() {
+    var k = kid(), n = Object.keys(k.badges).length;
+    render(top() + '<div class="center big" style="margin-bottom:8px">🏅 배지 ' + n + ' / ' + BADGES.length + '</div>' +
+      BADGES.map(function (b) { var got = k.badges[b.id]; return '<div class="bd' + (got ? '' : ' no') + '"><div class="em">' + (got ? b.emoji : '🔒') + '</div><div><div class="nm">' + esc(b.name) + '</div><div class="hint">' + esc(b.hint) + (got ? ' · ' + got.slice(5).replace('-', '/') + ' 획득' : '') + '</div></div></div>'; }).join("") +
+      '<button class="btn ghost" data-go="' + (dayState(S.cur).done ? 'locked' : 'home') + '" style="margin-top:12px">↩ 돌아가기</button>');
+  }
 
   // ---------- 화면: 아이 고르기 ----------
   function screenKids() {
@@ -213,12 +268,13 @@
     var topic = topicOfDay();
     render(top() +
       '<div class="prog"><div style="width:' + (n / 3 * 100) + '%"></div></div>' +
-      '<div class="muted" style="color:#c9d4ea;margin-bottom:6px">오늘 미션 ' + n + '/3 · 다 깨면 카드를 뽑아요 🎴' + (k.streak > 1 ? ' · 🔥 ' + k.streak + '일 연속' : '') + '</div>' +
+      '<div class="muted" style="color:#c9d4ea;margin-bottom:6px">오늘 미션 ' + n + '/3 · 다 깨면 카드를 뽑아요 🎁' + (k.streak > 1 ? ' · 🔥 ' + k.streak + '일 연속' : '') + '</div>' +
       '<button class="btn' + (d.dict ? ' done' : '') + '" data-go="dict"' + (d.dict ? ' disabled' : '') + '>✏️ 받아쓰기 ' + esc(dictTitle()) + '<span class="tag">' + (d.dict ? '완료 ⭐' + d.dictok : '5문장') + '</span></button>' +
       '<button class="btn' + (d.eng ? ' done' : '') + '" data-go="eng"' + (d.eng ? ' disabled' : '') + '>🔤 영어 단어<span class="tag">' + (d.eng ? '완료 ⭐' + d.engok : '10단어') + '</span></button>' +
       '<button class="btn' + (d.quiz ? ' done' : '') + '" data-go="quiz"' + (d.quiz ? ' disabled' : '') + '>' + QUIZ[topic].emoji + ' 지식 퀴즈: ' + esc(topic) + '<span class="tag">' + (d.quiz ? '완료 ⭐' + d.quizok : '10문제') + '</span></button>' +
-      (n === 3 ? '<button class="btn main" data-go="card">🎴 카드 뽑기!</button>' : '') +
-      '<div class="row"><button class="btn ghost" data-go="album">📚 카드첩</button><button class="btn ghost" data-go="stats">📊 기록</button><button class="btn ghost" data-go="kids">↩ 대원 바꾸기</button></div>'
+      (n === 3 ? '<button class="btn main" data-go="card">🎁 카드 뽑기!</button>' : '') +
+      '<div class="row"><button class="btn ghost" data-go="album">📚 카드첩</button><button class="btn ghost" data-go="badges">🏅 배지</button><button class="btn ghost" data-go="stats">📊 기록</button></div>' +
+      '<button class="btn ghost" data-go="kids">↩ 대원 바꾸기</button>'
     );
   }
   // ---------- 기록 ----------
@@ -230,7 +286,7 @@
     function cardOf(id) { var c = CARDS.filter(function (x) { return x.id === id; })[0]; return c ? c.emoji + " " + c.name : "-"; }
     function fmt(d) { return d.slice(5, 7).replace(/^0/, "") + "/" + d.slice(8, 10).replace(/^0/, "") + " (" + "일월화수목금토"[new Date(d.slice(0, 4), d.slice(5, 7) - 1, d.slice(8, 10)).getDay()] + ")"; }
     render(top() + '<div class="center big" style="margin-bottom:8px">📊 ' + esc(k.name) + '의 기록</div>' +
-      '<div class="panel"><div class="score"><span>🔥<br><small>연속</small><br>' + k.streak + '일</span><span>🧭<br><small>탐험</small><br>' + played + '일</span><span>🎴<br><small>카드</small><br>' + Object.keys(k.cards).length + '장</span><span>⚔️<br><small>배틀</small><br>' + k.battles + '승</span></div></div>' +
+      '<div class="panel"><div class="score"><span>🔥<br><small>연속</small><br>' + k.streak + '일</span><span>🧭<br><small>탐험</small><br>' + played + '일</span><span>🎁<br><small>카드</small><br>' + Object.keys(k.cards).length + '장</span><span>🏅<br><small>배지</small><br>' + Object.keys(k.badges).length + '개</span><span>⚔️<br><small>배틀</small><br>' + k.battles + '승</span></div></div>' +
       (sum.n ? '<div class="panel small"><b>평균 점수</b> · ✏️ 받아쓰기 ' + (sum.d / sum.n).toFixed(1) + '/5 · 🔤 영어 ' + (sum.e / sum.n).toFixed(1) + '/10 · 🦖 퀴즈 ' + (sum.q / sum.n).toFixed(1) + '/10</div>' : '') +
       '<div class="panel small"><b>최근 14일</b>' +
       (days.length ? '<table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:16px"><tr style="color:var(--muted)"><th style="text-align:left">날짜</th><th>✏️</th><th>🔤</th><th>🦖</th><th style="text-align:left">카드</th></tr>' +
@@ -328,11 +384,12 @@
   function finishMission(kind, ok, total) {
     var d = dayState(S.cur); d[kind] = true; d[kind + "ok"] = ok;
     var h = S.hist[S.cur][today()] = S.hist[S.cur][today()] || {}; h[kind[0]] = ok; save();
+    checkBadges(S.cur, { kind: kind, ok: ok, total: total });
     confetti(80); beep("card");
     var n = (d.dict ? 1 : 0) + (d.eng ? 1 : 0) + (d.quiz ? 1 : 0);
     render(top() + '<div class="panel center"><div class="huge">' + (ok === total ? '🏆' : ok >= total * 0.6 ? '🌟' : '💪') + '</div><div class="big">' + ok + ' / ' + total + ' 맞혔어요!</div>' +
       '<p class="muted">' + (n === 3 ? '미션 3개 완료! 카드를 뽑아요.' : '미션 ' + n + '/3 · 남은 미션 ' + (3 - n) + '개') + '</p>' +
-      '<button class="btn main" data-go="' + (n === 3 ? 'card' : 'home') + '">' + (n === 3 ? '🎴 카드 뽑기!' : '다음 미션 ➜') + '</button></div>');
+      '<button class="btn main" data-go="' + (n === 3 ? 'card' : 'home') + '">' + (n === 3 ? '🎁 카드 뽑기!' : '다음 미션 ➜') + '</button></div>');
   }
 
   // ---------- 카드 뽑기 ----------
@@ -346,13 +403,14 @@
     var t = today(); if (k.lastDay !== t) { k.streak = (k.lastDay === yesterday() ? k.streak : 0) + 1; k.lastDay = t; }
     d.card = c.id; var h = S.hist[S.cur][t] = S.hist[S.cur][t] || {}; h.card = c.id; save();
     showCard(c.id, true);
+    setTimeout(function () { checkBadges(S.cur, { card: c, dayDone: true }); }, 3200);
   }
   function yesterday() { var d = new Date(); d.setDate(d.getDate() - 1); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
   function showCard(id, fresh) {
     var c = CARDS.filter(function (x) { return x.id === id; })[0]; var cnt = kid().cards[id] || 1;
     var gname = ["", "일반", "희귀 ✨", "전설 🌟"][c.grade];
     render(top() + '<div class="center"><div class="big">' + (fresh ? '오늘의 카드!' : '오늘 뽑은 카드') + '</div></div>' +
-      '<div class="cardbox"><div class="cardi' + (fresh ? ' shake' : ' flip') + '" id="cardi"><div class="face back">🎴</div><div class="face front g' + c.grade + '"><div class="em">' + c.emoji + '</div><div class="nm">' + esc(c.name) + '</div><div class="gr">' + c.set + ' · ' + gname + (cnt > 1 ? ' · ' + cnt + '장째' : '') + '</div></div></div></div>' +
+      '<div class="cardbox"><div class="cardi' + (fresh ? ' shake' : ' flip') + '" id="cardi"><div class="face back">🌟</div><div class="face front g' + c.grade + '"><div class="em">' + c.emoji + '</div><div class="nm">' + esc(c.name) + '</div><div class="gr">' + c.set + ' · ' + gname + (cnt > 1 ? ' · ' + cnt + '장째' : '') + '</div></div></div></div>' +
       '<div class="panel center" id="cardfact" style="visibility:' + (fresh ? 'hidden' : 'visible') + '"><p>' + esc(c.fact) + '</p>' + (cnt > 1 && fresh ? '<p class="muted">또 나왔네! 같은 카드가 ' + cnt + '장이에요.</p>' : '') + '</div>' +
       '<button class="btn main" data-go="reward">🎮 보상 게임 3분!</button><button class="btn ghost" data-go="album">📚 카드첩</button>');
     if (fresh) setTimeout(function () { var e = $("cardi"); if (e) { e.classList.remove("shake"); e.classList.add("flip"); } beep("card"); confetti(c.grade === 3 ? 160 : 70); setTimeout(function () { var f = $("cardfact"); if (f) f.style.visibility = "visible"; }, 900); }, 1900);
@@ -375,7 +433,7 @@
   function screenLocked() {
     var d = dayState(S.cur); var c = d.card ? CARDS.filter(function (x) { return x.id === d.card; })[0] : null;
     render(top() + '<div class="panel center"><div class="huge">🌙</div><div class="big">오늘 탐험 완료!</div><p>내일 새 미션과 새 카드가 기다려요.</p>' + (c ? '<p class="huge">' + c.emoji + '</p><p><b>' + esc(c.name) + '</b></p>' : '') + '</div>' +
-      '<div class="row"><button class="btn ghost" data-go="album">📚 카드첩</button><button class="btn ghost" data-go="stats">📊 기록</button></div><button class="btn ghost" data-go="kids">↩ 대원 바꾸기</button><button class="btn ghost small" data-go="parent">🔒 부모님</button>');
+      '<div class="row"><button class="btn ghost" data-go="album">📚 카드첩</button><button class="btn ghost" data-go="badges">🏅 배지</button><button class="btn ghost" data-go="stats">📊 기록</button></div><button class="btn ghost" data-go="kids">↩ 대원 바꾸기</button><button class="btn ghost small" data-go="parent">🔒 부모님</button>');
   }
   // 2048
   var G = null;
@@ -426,6 +484,7 @@
   }
   function battleNext() {
     S.battleDay = today(); var w = M.sc[0] === M.sc[1] ? -1 : (M.sc[0] > M.sc[1] ? 0 : 1); if (w >= 0) S.kids[w].battles++; save(); confetti(120); beep("card");
+    if (w >= 0) setTimeout(function () { checkBadges(w, { win: true }); }, 800);
     render('<div class="panel center"><div class="huge">' + (w < 0 ? '🤝' : '🏆') + '</div><div class="big">' + (w < 0 ? '무승부!' : esc(S.kids[w].name) + ' 승리!') + '</div><div class="score"><span>' + esc(S.kids[0].name) + ' ' + M.sc[0] + '</span><span>' + esc(S.kids[1].name) + ' ' + M.sc[1] + '</span></div><p class="muted">통산 승리: ' + esc(S.kids[0].name) + ' ' + S.kids[0].battles + ' · ' + esc(S.kids[1].name) + ' ' + S.kids[1].battles + '</p></div><button class="btn main" data-go="kids">돌아가기</button>');
   }
 
@@ -485,6 +544,7 @@
       case "endreward": return endReward();
       case "album": return screenAlbum();
       case "stats": return screenStats();
+      case "badges": return screenBadges();
       case "locked": return screenLocked();
       case "battle": return screenBattle();
       case "parent": return screenParent();
