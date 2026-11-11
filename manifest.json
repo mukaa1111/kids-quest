@@ -1,0 +1,10 @@
+{
+  "name": "탐험대 미션",
+  "short_name": "탐험대",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#1b2a4a",
+  "theme_color": "#1b2a4a",
+  "lang": "ko",
+  "icons": []
+}
