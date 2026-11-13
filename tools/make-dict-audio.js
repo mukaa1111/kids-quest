@@ -12,7 +12,9 @@ function add(it) {
   var file = 's' + crypto.createHash('md5').update(it.s, 'utf8').digest('hex').slice(0, 10) + '.wav';
   list.push({ file: file, text: it.s }); map[it.s] = file;
 }
-Object.keys(D.levels).forEach(function (k) { D.levels[k].items.forEach(add); });
+// 전체 16급을 다 만들면 20MB라서(기준 15MB), 지금 급수(current)와 그보다 낮은 급(복습에 나옴)만 만든다.
+// 급수를 올리면 이 두 가지를 다시 돌려야 새 급의 음성이 생긴다. 음성이 없는 문장은 패드 음성으로 읽는다.
+Object.keys(D.levels).filter(function (k) { return +k <= +D.current; }).forEach(function (k) { D.levels[k].items.forEach(add); });
 (D.basic || []).forEach(add);
 var dir = path.join(__dirname, '..', 'sounds', 'dict');
 fs.mkdirSync(dir, { recursive: true });
